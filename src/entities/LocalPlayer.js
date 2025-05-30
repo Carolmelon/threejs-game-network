@@ -49,7 +49,13 @@ export class LocalPlayer extends BasePlayer {
 
         this.initControls();
         this.updatePositionToGround();
-        this.model.visible = this.viewMode === 'third-person';
+    }
+
+    _onModelLoaded() {
+        super._onModelLoaded();
+        if (this.model) {
+            this.model.visible = this.viewMode === 'third-person';
+        }
     }
 
     initControls() {

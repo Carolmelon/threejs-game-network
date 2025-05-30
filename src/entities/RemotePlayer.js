@@ -14,9 +14,6 @@ export class RemotePlayer extends BasePlayer {
         
         this.stateBuffer = [];
 
-        if (this.model) {
-             this.model.visible = true;
-        }
         this.updateState(initialData, true);
     }
 

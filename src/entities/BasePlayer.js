@@ -73,9 +73,23 @@ export class BasePlayer {
                 this.activeAction.play();
             }
             console.log(`Character model loaded for player ${this.playerId || 'local'}`);
+            
+            this._onModelLoaded();
+            this.updateModelTransform();
         }, undefined, (error) => {
             console.error('Error loading character model:', error);
+            this._onModelLoadError(error);
         });
+    }
+
+    _onModelLoaded() {
+        if (this.model && !this.isLocal) { 
+            this.model.visible = true;
+        }
+    }
+
+    _onModelLoadError(error) {
+        console.error(`Error in _onModelLoadError for player ${this.playerId || 'local'}:`, error);
     }
 
     fadeToAction(name, duration = 0.2, isOneShot = false, onFinishedCallback = null) {
