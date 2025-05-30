@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>开放世界游戏原型 - 多人版</title>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden;
+            font-family: 'Arial', sans-serif;
+            background-color: #333; 
+        }
+        canvas { 
+            display: block; 
+        }
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            background-color: rgba(0,0,0,0.8);
+            z-index: 100;
+        }
+        #login-overlay input {
+            padding: 10px;
+            margin: 10px;
+            border-radius: 5px;
+            border: 1px solid #555;
+            background-color: #444;
+            color: white;
+            font-size: 16px;
+        }
+        #login-overlay button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #5cb85c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #login-overlay button:hover {
+            background-color: #4cae4c;
+        }
+        #loading {
+            font-size: 18px;
+            padding: 20px;
+            background-color: rgba(0,0,0,0.7);
+            border-radius: 5px;
+        }
+        #start-prompt {
+            padding: 20px;
+            border-radius: 5px;
+            font-size: 18px;
+            text-align: center;
+            cursor: pointer;
+            background-color: rgba(0,0,0,0.7);
+            display: none; 
+        }
+        #lock-error {
+            color: #ff6b6b;
+            background-color: rgba(0,0,0,0.7);
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 14px;
+            text-align: center;
+            display: none; 
+            position: absolute; 
+            top: 60%; left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            background-color: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            pointer-events: none; 
+        }
+        #debug {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            color: white;
+            background-color: rgba(0,0,0,0.5);
+            padding: 5px;
+            font-size: 10px;
+            font-family: monospace;
+            display: none; 
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        #chat-container {
+            position: absolute;
+            bottom: 10px; 
+            right: 10px;
+            width: 300px;
+            background-color: rgba(0,0,0,0.6);
+            border-radius: 5px;
+            padding: 10px;
+            color: white;
+            font-size: 12px;
+            display: flex;
+            flex-direction: column;
+            max-height: 200px; 
+        }
+        #chat-display {
+            flex-grow: 1;
+            overflow-y: auto;
+            margin-bottom: 5px;
+            word-break: break-all;
+        }
+        #chat-display .chat-message strong {
+            color: #76c7c0; 
+        }
+        #chat-display .chat-message.local strong {
+            color: #f0ad4e; 
+        }
+        #chat-input-area {
+            display: flex;
+        }
+        #chat-input {
+            flex-grow: 1;
+            padding: 5px;
+            border-radius: 3px;
+            border: 1px solid #555;
+            background-color: #333;
+            color: white;
+            margin-right: 5px;
+        }
+        #chat-send-btn {
+            padding: 5px 10px;
+            background-color: #5bc0de;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        #chat-send-btn:hover {
+            background-color: #46b8da;
+        }
+        #player-list {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 200px;
+            background-color: rgba(0,0,0,0.6);
+            border-radius: 5px;
+            padding: 10px;
+            color: white;
+            font-size: 12px;
+        }
+        #player-list h3 {
+            margin-top: 0;
+            font-size: 14px;
+        }
+        #player-list ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        #player-list li {
+            padding: 2px 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="login-overlay" class="overlay">
+        <h2>进入开放世界</h2>
+        <input type="text" id="username-input" placeholder="输入你的昵称" value="玩家_"/>
+        <button id="connect-btn">连接并开始游戏</button>
+        <p style="font-size:12px; margin-top: 20px;">请确保后端服务 (<code>npm run server</code>) 已启动。</p>
+    </div>
+
+    <div id="loading" class="overlay" style="display: none;">正在加载世界...</div>
+    <div id="start-prompt" class="overlay" style="display: none;">点击此处开始游戏<br>(锁定鼠标指针)</div>
+    <div id="lock-error" class="overlay" style="display: none;">锁定鼠标失败，请再次点击或检查浏览器设置</div>
+
+    <div id="info">
+        WASD/方向键移动 | 鼠标控制视角 | 空格跳跃 | Shift下蹲 | H键显示/隐藏此提示 | T键切换视角 | 鼠标滚轮缩放(第三人称)
+    </div>
+    <div id="debug"></div>
+
+    <div id="chat-container">
+        <div id="chat-display"></div>
+        <div id="chat-input-area">
+            <input type="text" id="chat-input" placeholder="输入聊天内容...">
+            <button id="chat-send-btn">发送</button>
+        </div>
+    </div>
+
+    <div id="player-list">
+        <div id="player-list-display">
+             <h3>在线玩家:</h3>
+             <ul></ul>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        const usernameInput = document.getElementById('username-input');
+        if (usernameInput) {
+            usernameInput.value += Math.floor(Math.random() * 1000);
+        }
+    </script>
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html> 
